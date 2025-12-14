@@ -1,58 +1,44 @@
-//your JS code here. If required.
-const input = document.getElementById("typeahead");
-const suggestionsList = document.getElementById("suggestions-list");
-
-let debounceTimer = null;
-
-// Helper to clear suggestions
-function clearSuggestions() {
-  suggestionsList.innerHTML = "";
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
 }
 
-// Fetch and render suggestions
-async function fetchSuggestions(text) {
-  try {
-    const response = await fetch(
-      `https://api.frontendexpert.io/api/fe/glossary-suggestions?text=${encodeURIComponent(
-        text
-      )}`
-    );
-
+// Fetch suggestions
+async function fetchSuggestions(query) {
+    if (!query) {
+        document.getElementById('suggestions-list').innerHTML = '';
+        return;
+    }
+    
+    const response = await fetch(`https://api.frontendexpert.io/api/fe/glossary-suggestions?text=${query}`);
     const suggestions = await response.json();
-    clearSuggestions();
-
-    suggestions.forEach((item) => {
-      const li = document.createElement("li");
-      li.textContent = item;
-
-      li.addEventListener("click", () => {
-        input.value = item;
-        clearSuggestions();
-      });
-
-      suggestionsList.appendChild(li);
-    });
-  } catch (error) {
-    clearSuggestions();
-  }
+    displaySuggestions(suggestions);
 }
 
-// Input event with debounce
-input.addEventListener("input", () => {
-  const text = input.value.trim();
+// Display suggestions
+function displaySuggestions(suggestions) {
+    const suggestionsList = document.getElementById('suggestions-list');
+    suggestionsList.innerHTML = ''; // Clear previous suggestions
+    
+    suggestions.forEach(term => {
+        const li = document.createElement('li');
+        li.textContent = term;
+        li.onclick = () => selectSuggestion(term);
+        suggestionsList.appendChild(li);
+    });
+}
 
-  // Clear previous timer
-  clearTimeout(debounceTimer);
+// Select suggestion
+function selectSuggestion(term) {
+    document.getElementById('typeahead').value = term;
+    document.getElementById('suggestions-list').innerHTML = ''; // Clear suggestions
+}
 
-  // If input is empty, clear suggestions and do nothing
-  if (text === "") {
-    clearSuggestions();
-    return;
-  }
-
-  // Debounce API call by 500ms
-  debounceTimer = setTimeout(() => {
-    fetchSuggestions(text);
-  }, 500);
-});
-
+// Input event listener
+const typeaheadInput = document.getElementById('typeahead');
+typeaheadInput.addEventListener('input', debounce((event) => {
+    fetchSuggestions(event.target.value);
+}, 500));
